@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="theme-color" content="#0f4c81"/>
+  <link rel="manifest" href="manifest.json">
+  <!-- Favicon and icons for progressive web app -->
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192x192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+  <title>Mis Bolsillos</title>
+  <style>
+    :root{--azul:#0f4c81;--azul2:#1f6fa9;--fondo:#f4f8fb;--blanco:#fff;--texto:#1e293b;--gris:#64748b;--borde:#dbeafe;--rojo:#b91c1c;}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,sans-serif;background:linear-gradient(180deg,#eaf4ff 0%,#f9fbfd 100%);color:var(--texto);}
+    .app{max-width:540px;margin:0 auto;padding:18px;}
+    .header{background:var(--azul);color:white;padding:22px;border-radius:24px;box-shadow:0 8px 20px rgba(15,76,129,.20);margin-bottom:16px;}
+    .header h1{margin:0;font-size:28px}.header p{margin:8px 0 0;opacity:.92;font-size:14px}
+    .card{background:var(--blanco);border:1px solid var(--borde);border-radius:22px;padding:16px;margin-bottom:14px;box-shadow:0 4px 14px rgba(15,76,129,.08);}
+    h2{font-size:19px;margin:0 0 10px} label{display:block;font-weight:bold;margin:10px 0 6px;font-size:14px}
+    input{width:100%;padding:13px;border:1px solid #cbd5e1;border-radius:14px;font-size:16px;outline:none;}
+    button{width:100%;border:none;border-radius:15px;padding:14px;margin-top:14px;font-size:16px;font-weight:bold;color:white;background:var(--azul);cursor:pointer;}
+    button.secondary{background:#334155} button.danger{background:var(--rojo)}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .pocket{padding:14px;border-radius:18px;background:#f8fafc;border:1px solid #e2e8f0;}
+    .name{font-weight:bold;font-size:14px;color:var(--gris)} .value{font-weight:bold;font-size:20px;margin-top:6px}
+    .total{font-size:32px;font-weight:bold;color:var(--azul);margin-top:6px}
+    .history{max-height:300px;overflow:auto}.item{border-bottom:1px solid #e2e8f0;padding:10px 0}.item:last-child{border-bottom:0}
+    .small{font-size:13px;color:var(--gris);line-height:1.4}.footer{text-align:center;color:var(--gris);font-size:12px;padding:18px 0}
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="header">
+      <h1>💙 Mis Bolsillos</h1>
+      <p>Cada peso tiene una misión.</p>
+    </section>
+
+    <section class="card">
+      <h2>➕ Registrar ingreso</h2>
+      <label>Fecha</label><input type="date" id="fecha">
+      <label>Concepto</label><input type="text" id="concepto" placeholder="Ej: Certificado de origen">
+      <label>Valor recibido</label><input type="number" id="valor" placeholder="Ej: 650000">
+      <button onclick="registrar()">Registrar y repartir</button>
+    </section>
+
+    <section class="card">
+      <h2>📊 Última distribución</h2>
+      <div class="grid">
+        <div class="pocket"><div class="name">🏠 Hogar 40%</div><div class="value" id="uHogar">$0</div></div>
+        <div class="pocket"><div class="name">💼 Negocio 15%</div><div class="value" id="uNegocio">$0</div></div>
+        <div class="pocket"><div class="name">💳 Deudas 35%</div><div class="value" id="uDeudas">$0</div></div>
+        <div class="pocket"><div class="name">🛟 Paz Mental 10%</div><div class="value" id="uPaz">$0</div></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>💰 Acumulado</h2>
+      <div class="small">Total recibido</div><div class="total" id="total">$0</div>
+      <div class="grid" style="margin-top:14px">
+        <div class="pocket"><div class="name">🏠 Hogar</div><div class="value" id="tHogar">$0</div></div>
+        <div class="pocket"><div class="name">💼 Negocio</div><div class="value" id="tNegocio">$0</div></div>
+        <div class="pocket"><div class="name">💳 Deudas</div><div class="value" id="tDeudas">$0</div></div>
+        <div class="pocket"><div class="name">🛟 Paz Mental</div><div class="value" id="tPaz">$0</div></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>🧾 Historial</h2>
+      <div id="historial" class="history small">Aún no has registrado ingresos.</div>
+      <button class="secondary" onclick="exportarCSV()">Exportar historial CSV</button>
+      <button class="danger" onclick="borrarTodo()">Borrar todo</button>
+    </section>
+    <div class="footer">AM Finanzas · Mis Bolsillos</div>
+  </main>
+
+  <script>
+    if ('serviceWorker' in navigator) { navigator.serviceWorker.register('./service-worker.js'); }
+    const fmt = new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0});
+    document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
+    let registros = JSON.parse(localStorage.getItem('misBolsillosRegistros') || '[]');
+    function registrar(){
+      const fecha = document.getElementById('fecha').value;
+      const concepto = document.getElementById('concepto').value.trim() || 'Ingreso';
+      const valor = Number(document.getElementById('valor').value);
+      if(!fecha || !valor || valor <= 0){alert('Ingresa fecha y valor recibido.');return;}
+      const r={fecha,concepto,valor,hogar:valor*.40,negocio:valor*.15,deudas:valor*.35,paz:valor*.10};
+      registros.push(r); localStorage.setItem('misBolsillosRegistros',JSON.stringify(registros));
+      document.getElementById('concepto').value=''; document.getElementById('valor').value=''; actualizar();
+    }
+    function actualizar(){
+      const sum = k => registros.reduce((a,r)=>a+r[k],0);
+      document.getElementById('total').textContent=fmt.format(sum('valor'));
+      document.getElementById('tHogar').textContent=fmt.format(sum('hogar'));
+      document.getElementById('tNegocio').textContent=fmt.format(sum('negocio'));
+      document.getElementById('tDeudas').textContent=fmt.format(sum('deudas'));
+      document.getElementById('tPaz').textContent=fmt.format(sum('paz'));
+      const u=registros[registros.length-1];
+      if(u){document.getElementById('uHogar').textContent=fmt.format(u.hogar);document.getElementById('uNegocio').textContent=fmt.format(u.negocio);document.getElementById('uDeudas').textContent=fmt.format(u.deudas);document.getElementById('uPaz').textContent=fmt.format(u.paz);}
+      document.getElementById('historial').innerHTML = registros.length ? registros.slice().reverse().map(r=>`<div class="item"><strong>${r.fecha} · ${r.concepto}</strong>Recibido: ${fmt.format(r.valor)}<br>🏠 ${fmt.format(r.hogar)} · 💼 ${fmt.format(r.negocio)} · 💳 ${fmt.format(r.deudas)} · 🛟 ${fmt.format(r.paz)}</div>`).join('') : 'Aún no has registrado ingresos.';
+    }
+    function borrarTodo(){if(confirm('¿Seguro que deseas borrar todos los registros?')){registros=[];localStorage.removeItem('misBolsillosRegistros');actualizar();}}
+    function exportarCSV(){
+      if(!registros.length){alert('No hay registros para exportar.');return;}
+      const filas=[['Fecha','Concepto','Valor recibido','Hogar 40%','Negocio 15%','Deudas 35%','Paz Mental 10%'],...registros.map(r=>[r.fecha,r.concepto,r.valor,r.hogar,r.negocio,r.deudas,r.paz])];
+      const csv=filas.map(f=>f.join(';')).join('\n'); const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+      const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='mis_bolsillos_historial.csv'; a.click(); URL.revokeObjectURL(url);
+    }
+    actualizar();
+  </script>
+</body>
+</html>

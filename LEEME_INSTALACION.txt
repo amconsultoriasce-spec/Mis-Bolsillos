@@ -1,0 +1,21 @@
+MIS BOLSILLOS - APP WEB INSTALABLE
+
+Esta versión está organizada como PWA lista para instalarse en Android o iPhone.
+
+Estructura de archivos principales:
+• index.html
+• manifest.json (actualizado con iconos PNG de 192 × 192 y 512 × 512)
+• service-worker.js (version v2, cachea recursos clave)
+• icons/icon-192x192.png
+• icons/icon-512x512.png
+
+Para que funcione como app en celular, debe subirse a un servicio web como:
+• Netlify
+• GitHub Pages
+• Vercel
+
+Después de abrir el enlace desde el celular:
+• En iPhone: toca el botón Compartir y elige «Agregar a pantalla de inicio».
+• En Android: abre el menú del navegador y selecciona «Instalar aplicación» o «Agregar a pantalla principal».
+
+La aplicación guarda los datos de forma local en el navegador del dispositivo (localStorage) y funciona sin conexión gracias al service worker.
